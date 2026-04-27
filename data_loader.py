@@ -19,6 +19,12 @@ _DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "Twitch_game_data.csv")
 
 def _build_dataframe(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, encoding="latin-1")
+    df = df.dropna(subset=["Game"]).reset_index(drop=True)
+    df["Year"] = pd.to_numeric(df["Year"], errors="coerce").astype("Int64")
+    df["Month"] = pd.to_numeric(df["Month"], errors="coerce").astype("Int64")
+    df = df.dropna(subset=["Year", "Month"]).reset_index(drop=True)
+    df["Year"] = df["Year"].astype(int)
+    df["Month"] = df["Month"].astype(int)
     df["pre_pandemic"] = df["Year"] <= 2020
     return df
 

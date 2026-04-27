@@ -18,7 +18,7 @@ with st.sidebar:
     )
     selected_games = st.multiselect(
         "Jogos",
-        options=sorted(df["Game"].unique()),
+        options=sorted(df["Game"].dropna().unique()),
         default=top10_default,
     )
     metric = st.selectbox("Métrica principal", NUMERIC_COLS, index=0)
@@ -65,7 +65,7 @@ with tab2:
         options=NUMERIC_COLS,
         default=["Hours_watched", "Peak_viewers", "Avg_viewers", "Streamers", "Avg_viewer_ratio"],
     )
-    available_games = sorted(df_filtered["Game"].unique())
+    available_games = sorted(df_filtered["Game"].dropna().unique())
     default_games = available_games[:3] if len(available_games) >= 3 else available_games
     games_radar = st.multiselect(
         "Jogos para comparar (máx. 5)",
@@ -135,20 +135,32 @@ with tab4:
         df_agg = df_score.groupby("Game").agg(
             Streamers=("Streamers", "mean"),
             score=("score", "mean"),
-        ).reset_index()
+        ).reset_index().dropna(subset=["Streamers", "score"])
 
-        auto_threshold = streamers_threshold(df_agg)
-        threshold = st.slider(
-            "Limiar de Streamers",
-            min_value=int(df_agg["Streamers"].min()),
-            max_value=int(df_agg["Streamers"].max()),
-            value=int(auto_threshold),
-            step=100,
-        )
-        n_above = int((df_agg["Streamers"] >= threshold).sum())
-        st.caption(f"{n_above} jogos acima do limiar ({n_above / len(df_agg) * 100:.1f}%)")
+        if df_agg.empty:
+            st.info("Sem dados suficientes para calcular o limiar.")
+        else:
+            s_min = int(df_agg["Streamers"].min())
+            s_max = int(df_agg["Streamers"].max())
+            auto_threshold = int(streamers_threshold(df_agg))
 
-        st.plotly_chart(scatter_limiar(df_agg, threshold), use_container_width=True)
+            if s_max <= s_min:
+                threshold = s_min
+                st.caption(f"Apenas um valor de Streamers presente ({s_min:,}). Limiar fixo.")
+            else:
+                step = max(1, (s_max - s_min) // 100)
+                threshold = st.slider(
+                    "Limiar de Streamers",
+                    min_value=s_min,
+                    max_value=s_max,
+                    value=min(max(auto_threshold, s_min), s_max),
+                    step=step,
+                )
+
+            n_above = int((df_agg["Streamers"] >= threshold).sum())
+            st.caption(f"{n_above} jogos acima do limiar ({n_above / len(df_agg) * 100:.1f}%)")
+
+            st.plotly_chart(scatter_limiar(df_agg, threshold), use_container_width=True)
 
 # ── Aba 5: Q&A ────────────────────────────────────────────────────────────────
 with tab5:

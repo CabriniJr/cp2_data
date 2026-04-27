@@ -45,8 +45,21 @@ def line_timeline(df: pd.DataFrame, game: str, metric: str) -> go.Figure:
     df_game = df_game.sort_values("date")
     fig = px.line(df_game, x="date", y=metric,
                   title=f"{game} — {metric.replace('_', ' ')} ao longo do tempo")
-    fig.add_vline(x="2021-01-01", line_dash="dash", line_color="red",
-                  annotation_text="Início pós-pandemia")
+    pandemic_start = pd.Timestamp("2021-01-01")
+    fig.add_shape(
+        type="line",
+        yref="paper",
+        x0=pandemic_start, x1=pandemic_start,
+        y0=0, y1=1,
+        line=dict(color="red", dash="dash"),
+    )
+    fig.add_annotation(
+        x=pandemic_start, y=1.05,
+        yref="paper",
+        text="Início pós-pandemia",
+        showarrow=False,
+        font=dict(color="red"),
+    )
     return fig
 
 
@@ -63,6 +76,18 @@ def scatter_limiar(df: pd.DataFrame, threshold: float) -> go.Figure:
         hover_data=["Game"],
         title="Limiar de Sucesso por número de Streamers",
     )
-    fig.add_vline(x=threshold, line_dash="dash", line_color="red",
-                  annotation_text=f"Limiar: {threshold:,.0f}")
+    fig.add_shape(
+        type="line",
+        yref="paper",
+        x0=threshold, x1=threshold,
+        y0=0, y1=1,
+        line=dict(color="red", dash="dash"),
+    )
+    fig.add_annotation(
+        x=threshold, y=1.05,
+        yref="paper",
+        text=f"Limiar: {threshold:,.0f}",
+        showarrow=False,
+        font=dict(color="red"),
+    )
     return fig
