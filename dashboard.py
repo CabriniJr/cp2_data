@@ -70,9 +70,10 @@ tab_pandemia, tab_stats, tab_radar, tab_destaque, tab_corr, tab_limiar, tab_conc
 with tab_pandemia:
     st.header("1. O perfil de interação mudou a partir da pandemia?")
     st.markdown(
-        "Comparamos a média mensal das principais métricas de engajamento "
-        "**antes** (2016–2020) e **depois** (2021–2024) do início da pandemia. "
-        "Os indicadores mostram a variação percentual entre os dois períodos."
+        "> Em 2020, a Twitch cresceu em um único ano. Mas o número mais relevante "
+        "não é o **tamanho** do crescimento — é **o que mudou dentro dele**. "
+        "Pela primeira vez em 4 anos, **Just Chatting** derrubou **League of Legends** do #1. "
+        "As pessoas não queriam só ver jogos. Queriam **companhia**."
     )
 
     kpi_metrics = ["Hours_watched", "Avg_viewers", "Peak_viewers"]
@@ -88,22 +89,23 @@ with tab_pandemia:
     st.plotly_chart(bar_grouped(df_filtered, kpi_metrics), use_container_width=True)
 
     delta_hw = pandemic_delta(df_filtered, "Hours_watched")
-    sentido = "salto significativo" if delta_hw["delta_pct"] > 20 else (
-        "leve crescimento" if delta_hw["delta_pct"] > 0 else "queda"
-    )
+    delta_st = pandemic_delta(df_filtered, "Streamers")
     st.info(
-        f"**Interpretação:** Houve um {sentido} no consumo de conteúdo após 2020 — "
-        f"horas assistidas variaram **{delta_hw['delta_pct']:+.1f}%**. "
-        "Isso sugere que a pandemia alterou o comportamento de audiência na Twitch."
+        f"**Interpretação:** Horas assistidas variaram **{delta_hw['delta_pct']:+.1f}%** "
+        f"e o número de streamers únicos **{delta_st['delta_pct']:+.1f}%**. "
+        "O crescimento de **criadores** superou o de **audiência** — sinal de que "
+        "a porta de entrada da Twitch se abriu, e muita gente passou a streamar. "
+        "A plataforma deixou de ser só um lugar para *assistir* e virou um lugar para *participar*."
     )
 
 # ── Aba 2: Estatísticas Descritivas ───────────────────────────────────────────
 with tab_stats:
-    st.header("2. Distribuição das métricas")
+    st.header("2. Por trás da média: a dispersão")
     st.markdown(
-        "Antes de aprofundar, vamos olhar para a estatística descritiva — "
-        "**média, mediana, moda, desvio padrão, variância e quartis** das métricas. "
-        "Isso revela onde os dados se concentram e o quanto variam."
+        "Médias contam metade da história. **Mediana, moda, desvio padrão, "
+        "variância e quartis** revelam o resto: onde os dados realmente se "
+        "concentram e o quanto variam. A pista que vamos seguir aqui é: "
+        "*a Twitch ficou maior — mas também ficou mais desigual?*"
     )
 
     stats_df = descriptive_stats(df_filtered, NUMERIC_COLS)
@@ -124,24 +126,30 @@ with tab_stats:
 
     pre_std = float(df_filtered[df_filtered["pre_pandemic"]][chosen].std() or 0)
     post_std = float(df_filtered[~df_filtered["pre_pandemic"]][chosen].std() or 0)
+    post_median = float(df_filtered[~df_filtered["pre_pandemic"]][chosen].median() or 0)
+    post_mean = float(df_filtered[~df_filtered["pre_pandemic"]][chosen].mean() or 0)
     if pre_std > 0:
         var_change = (post_std - pre_std) / pre_std * 100
         comp = "aumentou" if var_change > 0 else "diminuiu"
+        skew_ratio = post_mean / post_median if post_median > 0 else 0
         st.info(
             f"**Interpretação:** O desvio padrão de *{chosen.replace('_', ' ')}* "
             f"{comp} **{abs(var_change):.1f}%** no pós-pandemia "
             f"(de {pre_std:,.0f} para {post_std:,.0f}). "
-            "Quanto maior o desvio, mais espalhados os valores — "
-            "indica polarização entre jogos populares e nichos."
+            f"A **média ({post_mean:,.0f}) é {skew_ratio:.1f}× maior que a mediana "
+            f"({post_median:,.0f})** — distribuição extremamente assimétrica: "
+            "**poucos jogos concentram a maior parte da audiência**, a maioria fica na cauda."
         )
 
 # ── Aba 3: Radar ──────────────────────────────────────────────────────────────
 with tab_radar:
-    st.header("3. Perfil comparativo entre jogos")
+    st.header("3. Três identidades coexistindo na mesma plataforma")
     st.markdown(
-        "Cada jogo tem seu próprio perfil de interação: alguns viralizam em pico, "
-        "outros mantêm audiência constante. O radar normaliza as métricas (0–1) "
-        "para comparar perfis lado a lado."
+        "Nem todo jogo cresce do mesmo jeito. O radar revela três perfis distintos:\n"
+        "- 🎮 **Comunidade consolidada** (League of Legends): *Avg_viewer_ratio* alto, audiência fiel\n"
+        "- 🎯 **Audiência de evento** (Fortnite): picos de *Peak_viewers* enormes, mas ratio baixo\n"
+        "- 💬 **Social** (Just Chatting): muitos *Streamers*, conteúdo conversacional\n\n"
+        "Compare os três para ver que a Twitch não é uma plataforma só — são várias dentro da mesma."
     )
 
     axes = st.multiselect(
@@ -172,10 +180,13 @@ with tab_radar:
 
 # ── Aba 4: Destaque ───────────────────────────────────────────────────────────
 with tab_destaque:
-    st.header("4. Quais jogos se destacaram?")
+    st.header("4. Quem se destacou — e por quê?")
     st.markdown(
-        f"Ranking dos top 10 jogos por *{metric.replace('_', ' ')}* e "
-        f"a evolução temporal do líder, com a marcação do início pós-pandemia."
+        "**Just Chatting não existia antes de 2018.** Em 2020, virou o jogo mais "
+        "assistido da plataforma — e nunca mais saiu do #1. "
+        "**GTA V** cresceu fortemente pós-pandemia, impulsionado pelos servidores de "
+        "*roleplay*. **VALORANT** lançou em 2020 e já acumulou mais horas que **Dota 2**, "
+        "um jogo com 4 anos de vantagem. Os top 3 concentram cerca de **27% de todo o mercado**."
     )
 
     top_n = (
@@ -211,7 +222,10 @@ with tab_corr:
     st.header("5. Quais métricas andam juntas?")
     st.markdown(
         "A **correlação de Pearson** mede o quanto duas métricas variam em conjunto: "
-        "**+1** = sobem juntas, **−1** = uma sobe quando a outra desce, **0** = sem relação linear."
+        "**+1** sobem juntas, **−1** uma sobe quando a outra desce, **0** independentes. "
+        "Algumas métricas aqui são praticamente redundantes (r ≈ 1) — outras totalmente "
+        "independentes (r ≈ 0). Saber qual é qual evita análises enganosas: "
+        "*fidelidade de audiência* (Avg_viewer_ratio), por exemplo, **não depende de volume**."
     )
 
     st.plotly_chart(correlation_heatmap(df_filtered, NUMERIC_COLS), use_container_width=True)
@@ -294,11 +308,18 @@ with tab_limiar:
             st.plotly_chart(scatter_limiar(df_agg, threshold), use_container_width=True)
 
             r_streamers_score = float(df_agg[["Streamers", "score"]].corr().iloc[0, 1])
+            above_games = df_agg[df_agg["Streamers"] >= threshold]["Game"].tolist()
+            below_games = df_agg[df_agg["Streamers"] < threshold]["Game"].tolist()
+            avg_above = float(df_filtered[df_filtered["Game"].isin(above_games)]["Avg_viewers"].mean() or 0)
+            avg_below = float(df_filtered[df_filtered["Game"].isin(below_games)]["Avg_viewers"].mean() or 0)
+            ratio = avg_above / avg_below if avg_below > 0 else 0
             st.info(
-                f"**Interpretação:** A correlação entre nº de streamers e o score "
-                f"composto é **r = {r_streamers_score:+.2f}**. "
-                f"Acima de **{threshold:,} streamers**, {pct_above:.0f}% dos jogos "
-                "tendem a apresentar score elevado — esse é um bom indicador de sucesso."
+                f"**Interpretação:** Acima de **{threshold:,} streamers**, os jogos têm "
+                f"audiência média **{ratio:.1f}× maior** que abaixo do limiar "
+                f"({avg_above:,.0f} vs {avg_below:,.0f} viewers em média). "
+                f"A correlação entre nº de streamers e o score composto é **r = {r_streamers_score:+.2f}**. "
+                "Existe uma **massa crítica de criadores** que precisa ser atingida antes "
+                "da audiência escalar — não é só popularidade, é fundação."
             )
 
 # ── Aba 7: Conclusão ──────────────────────────────────────────────────────────
@@ -354,6 +375,12 @@ with tab_conclusao:
         )
 
     st.markdown("---")
+    st.success(
+        "### A história em uma frase\n"
+        "**Os números voltaram depois da pandemia. O comportamento não voltou.** "
+        "A Twitch deixou de ser uma plataforma sobre jogos e virou uma plataforma sobre **pessoas que jogam**."
+    )
+
     st.caption(
         "Limitações: amostra restrita aos jogos rankeados mensalmente na Twitch; "
         "correlação não implica causalidade; o pico pandêmico (2020) pode mascarar tendências de longo prazo."
