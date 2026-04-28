@@ -31,3 +31,40 @@ def streamers_threshold(df: pd.DataFrame, pct: int = 75) -> float:
     if series.empty:
         return 0.0
     return float(series.quantile(pct / 100))
+
+
+def descriptive_stats(df: pd.DataFrame, cols: list) -> pd.DataFrame:
+    rows = []
+    for col in cols:
+        s = df[col].dropna()
+        if s.empty:
+            continue
+        mode_vals = s.mode()
+        mode_val = float(mode_vals.iloc[0]) if not mode_vals.empty else float("nan")
+        q1 = float(s.quantile(0.25))
+        q3 = float(s.quantile(0.75))
+        rows.append({
+            "Métrica": col,
+            "Média": float(s.mean()),
+            "Mediana": float(s.median()),
+            "Moda": mode_val,
+            "Desvio Padrão": float(s.std()),
+            "Variância": float(s.var()),
+            "Mín": float(s.min()),
+            "Q1": q1,
+            "Q3": q3,
+            "Máx": float(s.max()),
+            "IQR": q3 - q1,
+        })
+    return pd.DataFrame(rows)
+
+
+def top_correlated_pairs(df: pd.DataFrame, cols: list, n: int = 3) -> list:
+    corr = df[cols].corr().abs()
+    pairs = []
+    for i, a in enumerate(cols):
+        for b in cols[i + 1:]:
+            r = float(df[[a, b]].corr().iloc[0, 1])
+            pairs.append((a, b, r))
+    pairs.sort(key=lambda x: abs(x[2]), reverse=True)
+    return pairs[:n]

@@ -91,3 +91,50 @@ def scatter_limiar(df: pd.DataFrame, threshold: float) -> go.Figure:
         font=dict(color="red"),
     )
     return fig
+
+
+def box_pandemic(df: pd.DataFrame, metric: str) -> go.Figure:
+    """Box plot da métrica comparando pré vs pós pandemia."""
+    df = df.copy()
+    df["Período"] = df["pre_pandemic"].map({True: "Pré-pandemia (≤2020)", False: "Pós-pandemia (>2020)"})
+    fig = px.box(
+        df, x="Período", y=metric,
+        color="Período",
+        title=f"Distribuição de {metric.replace('_', ' ')} — pré vs pós pandemia",
+        points="outliers",
+    )
+    return fig
+
+
+def correlation_heatmap(df: pd.DataFrame, cols: list) -> go.Figure:
+    """Matriz de correlação de Pearson como heatmap."""
+    corr = df[cols].corr().round(2)
+    fig = px.imshow(
+        corr,
+        text_auto=True,
+        color_continuous_scale="RdBu_r",
+        zmin=-1, zmax=1,
+        aspect="auto",
+        title="Matriz de Correlação (Pearson)",
+    )
+    return fig
+
+
+def scatter_pair(df: pd.DataFrame, x_col: str, y_col: str, r: float) -> go.Figure:
+    """Scatter de duas métricas com coeficiente de correlação no título."""
+    fig = px.scatter(
+        df, x=x_col, y=y_col,
+        opacity=0.5,
+        hover_data=["Game"],
+        title=f"{x_col.replace('_', ' ')} × {y_col.replace('_', ' ')} (r = {r:.2f})",
+        trendline="ols" if _has_statsmodels() else None,
+    )
+    return fig
+
+
+def _has_statsmodels() -> bool:
+    try:
+        import statsmodels  # noqa: F401
+        return True
+    except ImportError:
+        return False
