@@ -39,10 +39,17 @@ df_filtered = df[df["Game"].isin(selected_games)] if selected_games else df
 
 def _qa_pandemic(df: pd.DataFrame, m: str) -> str:
     delta = pandemic_delta(df, m)
-    direction = "cresceu" if delta["delta_pct"] > 0 else "caiu"
+    verbo = "cresceu" if delta["delta_pct"] > 0 else "caiu"
+    abs_pct = abs(delta["delta_pct"])
+    if abs_pct > 20:
+        confirmacao = "Sim, de forma expressiva"
+    elif abs_pct > 5:
+        confirmacao = "Sim"
+    else:
+        confirmacao = "Marginalmente"
     return (
-        f"A média mensal de **{m.replace('_', ' ')}** "
-        f"{direction} **{abs(delta['delta_pct']):.1f}%** "
+        f"{confirmacao}. A média mensal de **{m.replace('_', ' ')}** "
+        f"{verbo} **{abs_pct:.1f}%** "
         f"no período pós-pandemia (2021+) em relação a antes (≤2020)."
     )
 
